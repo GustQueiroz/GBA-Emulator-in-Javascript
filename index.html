@@ -1,0 +1,669 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="description" content="Game Boy Advance Emulator - Play GBA games in your browser">
+<meta name="theme-color" content="#667eea">
+<title>GBA.js - Game Boy Advance Emulator</title>
+<link rel="stylesheet" href="resources/main.css">
+<link rel="stylesheet" href="style.css">
+<script src="js/util.js"></script>
+<script src="js/core.js"></script>
+<script src="js/arm.js"></script>
+<script src="js/thumb.js"></script>
+<script src="js/mmu.js"></script>
+<script src="js/io.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/video.js"></script>
+<script src="js/video/proxy.js"></script>
+<script src="js/video/software.js"></script>
+<script src="js/irq.js"></script>
+<script src="js/keypad.js"></script>
+<script src="js/sio.js"></script>
+<script src="js/savedata.js"></script>
+<script src="js/gpio.js"></script>
+<script src="js/gba.js"></script>
+<script src="resources/xhr.js"></script>
+
+<script>
+var gba;
+var runCommands = [];
+var debug = null;
+
+var perfMonitor = {
+	startTime: null,
+	sessionTime: 0,
+	lastFPS: 0,
+	memoryUsed: 0,
+	timerInterval: null
+};
+
+var controlRemapping = {
+	listening: false,
+	currentAction: null,
+	currentElement: null,
+	defaultMapping: {
+		UP: 38,
+		DOWN: 40,
+		LEFT: 37,
+		RIGHT: 39,
+		A: 88,
+		B: 90,
+		L: 65,
+		R: 83,
+		START: 13,
+		SELECT: 220
+	},
+	keyNames: {
+		8: 'Backspace',
+		9: 'Tab',
+		13: 'Enter',
+		16: 'Shift',
+		17: 'Ctrl',
+		18: 'Alt',
+		20: 'CapsLock',
+		27: 'Esc',
+		32: 'Space',
+		37: '←',
+		38: '↑',
+		39: '→',
+		40: '↓',
+		46: 'Delete',
+		220: '\\'
+	}
+};
+
+try {
+	gba = new GameBoyAdvance();
+	gba.keypad.eatInput = true;
+	gba.setLogger(function(level, error) {
+		console.log(error);
+		gba.pause();
+		var screen = document.getElementById('screen');
+		if (screen.getAttribute('class') == 'dead') {
+			console.log('We appear to have crashed multiple times without reseting.');
+			return;
+		}
+		var crash = document.createElement('img');
+		crash.setAttribute('id', 'crash');
+		crash.setAttribute('src', 'resources/crash.png');
+		screen.parentElement.insertBefore(crash, screen);
+		screen.setAttribute('class', 'dead');
+	});
+	
+	gba.reportFPS = function(fps) {
+		perfMonitor.lastFPS = Math.round(fps);
+		updatePerformanceMonitor();
+	};
+} catch (exception) {
+	gba = null;
+}
+
+window.onload = function() {
+	if (gba && FileReader) {
+		var canvas = document.getElementById('screen');
+		gba.setCanvas(canvas);
+
+		gba.logLevel = gba.LOG_ERROR;
+
+		loadRom('resources/bios.bin', function(bios) {
+			gba.setBios(bios);
+		});
+
+		if (!gba.audio.context) {
+			var soundbox = document.getElementById('sound');
+			soundbox.parentElement.removeChild(soundbox);
+		}
+
+		if (window.navigator.appName == 'Microsoft Internet Explorer') {
+			var pixelatedBox = document.getElementById('pixelated');
+			pixelatedBox.parentElement.removeChild(pixelatedBox);
+		}
+		
+		loadControlMappings();
+	} else {
+		var dead = document.getElementById('controls');
+		dead.parentElement.removeChild(dead);
+	}
+}
+
+function fadeOut(id, nextId, kill) {
+	var e = document.getElementById(id);
+	var e2 = document.getElementById(nextId);
+	if (!e) {
+		return;
+	}
+	var removeSelf = function() {
+		if (kill) {
+			e.parentElement.removeChild(e);
+		} else {
+			e.setAttribute('class', 'dead');
+			e.removeEventListener('webkitTransitionEnd', removeSelf);
+			e.removeEventListener('oTransitionEnd', removeSelf);
+			e.removeEventListener('transitionend', removeSelf);
+		}
+		if (e2) {
+			e2.setAttribute('class', 'hidden');
+			setTimeout(function() {
+				e2.removeAttribute('class');
+			}, 0);
+		}
+	}
+
+	e.addEventListener('webkitTransitionEnd', removeSelf, false);
+	e.addEventListener('oTransitionEnd', removeSelf, false);
+	e.addEventListener('transitionend', removeSelf, false);
+	e.setAttribute('class', 'hidden');
+}
+
+function run(file) {
+	var dead = document.getElementById('loader');
+	dead.value = '';
+	var load = document.getElementById('select');
+	load.textContent = 'Loading...';
+	load.classList.add('loading');
+	load.removeAttribute('onclick');
+	var pause = document.getElementById('pause');
+	pause.textContent = "PAUSE";
+	gba.loadRomFromFile(file, function(result) {
+		load.classList.remove('loading');
+		if (result) {
+			for (var i = 0; i < runCommands.length; ++i) {
+				runCommands[i]();
+			}
+			runCommands = [];
+			fadeOut('preload', 'ingame');
+			startSessionTimer();
+			gba.runStable();
+		} else {
+			load.textContent = 'FAILED';
+			setTimeout(function() {
+				load.textContent = 'Select ROM';
+				load.onclick = function() {
+					document.getElementById('loader').click();
+				}
+			}, 3000);
+		}
+	});
+}
+
+function reset() {
+	gba.pause();
+	gba.reset();
+	stopSessionTimer();
+	resetPerformanceMonitor();
+	var load = document.getElementById('select');
+	load.textContent = 'Select ROM';
+	var crash = document.getElementById('crash');
+	if (crash) {
+		var context = gba.targetCanvas.getContext('2d');
+		context.clearRect(0, 0, 480, 320);
+		gba.video.drawCallback();
+		crash.parentElement.removeChild(crash);
+		var canvas = document.getElementById('screen');
+		canvas.removeAttribute('class');
+	} else {
+		lcdFade(gba.context, gba.targetCanvas.getContext('2d'), gba.video.drawCallback);
+	}
+	load.onclick = function() {
+		document.getElementById('loader').click();
+	}
+	fadeOut('ingame', 'preload');
+}
+
+function uploadSavedataPending(file) {
+	runCommands.push(function() { gba.loadSavedataFromFile(file) });
+}
+
+function togglePause() {
+	var e = document.getElementById('pause');
+	if (gba.paused) {
+		if (debug && debug.gbaCon) {
+			debug.gbaCon.run();
+		} else {
+			gba.runStable();
+		}
+		e.textContent = "PAUSE";
+	} else {
+		if (debug && debug.gbaCon) {
+			debug.gbaCon.pause();
+		} else {
+			gba.pause();
+		}
+		e.textContent = "PLAY";
+	}
+}
+
+function screenshot() {
+	var canvas = gba.indirectCanvas;
+	window.open(canvas.toDataURL('image/png'), 'screenshot');
+}
+
+function updatePerformanceMonitor() {
+	var fpsElement = document.getElementById('fps-value');
+	if (fpsElement) {
+		fpsElement.textContent = perfMonitor.lastFPS || '--';
+		fpsElement.className = 'perf-value';
+		if (perfMonitor.lastFPS >= 58) {
+			fpsElement.classList.add('good');
+		} else if (perfMonitor.lastFPS >= 45) {
+			fpsElement.classList.add('warning');
+		} else if (perfMonitor.lastFPS > 0) {
+			fpsElement.classList.add('bad');
+		}
+	}
+	
+	var speedElement = document.getElementById('speed-value');
+	if (speedElement && perfMonitor.lastFPS > 0) {
+		var speed = Math.round((perfMonitor.lastFPS / 60) * 100);
+		speedElement.textContent = speed + '%';
+		speedElement.className = 'perf-value';
+		if (speed >= 95) {
+			speedElement.classList.add('good');
+		} else if (speed >= 80) {
+			speedElement.classList.add('warning');
+		} else {
+			speedElement.classList.add('bad');
+		}
+	}
+	
+	var memoryElement = document.getElementById('memory-value');
+	if (memoryElement) {
+		if (performance.memory) {
+			var usedMB = (performance.memory.usedJSHeapSize / 1048576).toFixed(1);
+			memoryElement.textContent = usedMB + ' MB';
+		} else {
+			memoryElement.textContent = 'N/A';
+		}
+	}
+}
+
+function startSessionTimer() {
+	perfMonitor.startTime = Date.now();
+	perfMonitor.sessionTime = 0;
+	
+	if (perfMonitor.timerInterval) {
+		clearInterval(perfMonitor.timerInterval);
+	}
+	
+	perfMonitor.timerInterval = setInterval(function() {
+		if (!gba.paused) {
+			perfMonitor.sessionTime = Math.floor((Date.now() - perfMonitor.startTime) / 1000);
+			updateSessionTime();
+			
+			var memoryElement = document.getElementById('memory-value');
+			if (memoryElement) {
+				if (performance.memory) {
+					var usedMB = (performance.memory.usedJSHeapSize / 1048576).toFixed(1);
+					memoryElement.textContent = usedMB + ' MB';
+				} else {
+					memoryElement.textContent = 'N/A';
+				}
+			}
+		}
+	}, 1000);
+}
+
+function stopSessionTimer() {
+	if (perfMonitor.timerInterval) {
+		clearInterval(perfMonitor.timerInterval);
+		perfMonitor.timerInterval = null;
+	}
+}
+
+function updateSessionTime() {
+	var timeElement = document.getElementById('time-value');
+	if (timeElement) {
+		var hours = Math.floor(perfMonitor.sessionTime / 3600);
+		var minutes = Math.floor((perfMonitor.sessionTime % 3600) / 60);
+		var seconds = perfMonitor.sessionTime % 60;
+		
+		var pad = function(num) {
+			return (num < 10 ? '0' : '') + num;
+		};
+		
+		timeElement.textContent = pad(hours) + ':' + pad(minutes) + ':' + pad(seconds);
+	}
+}
+
+function resetPerformanceMonitor() {
+	perfMonitor.lastFPS = 0;
+	perfMonitor.sessionTime = 0;
+	
+	document.getElementById('fps-value').textContent = '--';
+	document.getElementById('speed-value').textContent = '--';
+	document.getElementById('memory-value').textContent = '--';
+	document.getElementById('time-value').textContent = '00:00:00';
+	
+	document.getElementById('fps-value').className = 'perf-value';
+	document.getElementById('speed-value').className = 'perf-value';
+}
+
+function getKeyName(keyCode) {
+	if (controlRemapping.keyNames[keyCode]) {
+		return controlRemapping.keyNames[keyCode];
+	}
+	if (keyCode >= 65 && keyCode <= 90) {
+		return String.fromCharCode(keyCode);
+	}
+	if (keyCode >= 48 && keyCode <= 57) {
+		return String.fromCharCode(keyCode);
+	}
+	return 'Key' + keyCode;
+}
+
+function remapControl(element) {
+	if (controlRemapping.listening) {
+		cancelRemap();
+	}
+	
+	controlRemapping.listening = true;
+	controlRemapping.currentAction = element.getAttribute('data-action');
+	controlRemapping.currentElement = element;
+	
+	element.classList.add('listening');
+	var keyElement = element.querySelector('.control-key');
+	var hintElement = element.querySelector('.control-hint');
+	
+	keyElement.textContent = '...';
+	hintElement.textContent = 'Press any key';
+	
+	document.addEventListener('keydown', handleRemapKeyPress, true);
+}
+
+function handleRemapKeyPress(e) {
+	if (!controlRemapping.listening) return;
+	
+	e.preventDefault();
+	e.stopPropagation();
+	
+	if (e.keyCode === 27) {
+		var keyElement = controlRemapping.currentElement.querySelector('.control-key');
+		var action = controlRemapping.currentAction;
+		var currentKeyCode = gba.keypad['KEYCODE_' + action];
+		keyElement.textContent = getKeyName(currentKeyCode);
+		cancelRemap();
+		return;
+	}
+	
+	var action = controlRemapping.currentAction;
+	var keyCode = e.keyCode;
+	
+	gba.keypad['KEYCODE_' + action] = keyCode;
+	
+	var keyElement = controlRemapping.currentElement.querySelector('.control-key');
+	keyElement.textContent = getKeyName(keyCode);
+
+	saveControlMapping(action, keyCode);
+	
+	cancelRemap();
+}
+
+function cancelRemap() {
+	if (controlRemapping.currentElement) {
+		controlRemapping.currentElement.classList.remove('listening');
+		var hintElement = controlRemapping.currentElement.querySelector('.control-hint');
+		hintElement.textContent = 'Click to change';
+	}
+	
+	controlRemapping.listening = false;
+	controlRemapping.currentAction = null;
+	controlRemapping.currentElement = null;
+	
+	document.removeEventListener('keydown', handleRemapKeyPress, true);
+}
+
+function saveControlMapping(action, keyCode) {
+	var mappings = JSON.parse(localStorage.getItem('gbaControlMappings') || '{}');
+	mappings[action] = keyCode;
+	localStorage.setItem('gbaControlMappings', JSON.stringify(mappings));
+}
+
+function loadControlMappings() {
+	var mappings = JSON.parse(localStorage.getItem('gbaControlMappings') || '{}');
+	
+	for (var action in mappings) {
+		var keyCode = mappings[action];
+		gba.keypad['KEYCODE_' + action] = keyCode;
+		
+		var keyElement = document.getElementById('key-' + action);
+		if (keyElement) {
+			keyElement.textContent = getKeyName(keyCode);
+		}
+	}
+}
+
+function resetControlsToDefault() {
+	if (!confirm('Reset all controls to default settings?')) {
+		return;
+	}
+	
+	localStorage.removeItem('gbaControlMappings');
+	
+	for (var action in controlRemapping.defaultMapping) {
+		var keyCode = controlRemapping.defaultMapping[action];
+		gba.keypad['KEYCODE_' + action] = keyCode;
+		
+		var keyElement = document.getElementById('key-' + action);
+		if (keyElement) {
+			keyElement.textContent = getKeyName(keyCode);
+		}
+	}
+	
+	cancelRemap();
+}
+
+function lcdFade(context, target, callback) {
+	var i = 0;
+	var drawInterval = setInterval(function() {
+		i++;
+		var pixelData = context.getImageData(0, 0, 240, 160);
+		for (var y = 0; y < 160; ++y) {
+			for (var x = 0; x < 240; ++x) {
+				var xDiff = Math.abs(x - 120);
+				var yDiff = Math.abs(y - 80) * 0.8;
+				var xFactor = (120 - i - xDiff) / 120;
+				var yFactor = (80 - i - ((y & 1) * 10) - yDiff + Math.pow(xDiff, 1 / 2)) / 80;
+				pixelData.data[(x + y * 240) * 4 + 3] *= Math.pow(xFactor, 1 / 3) * Math.pow(yFactor, 1 / 2);
+			}
+		}
+		context.putImageData(pixelData, 0, 0);
+		target.clearRect(0, 0, 480, 320);
+		if (i > 40) {
+			clearInterval(drawInterval);
+		} else {
+			callback();
+		}
+	}, 50);
+}
+
+function setVolume(value) {
+	gba.audio.masterVolume = Math.pow(2, value) - 1;
+}
+
+function setPixelated(pixelated) {
+	var screen = document.getElementById('screen');
+	var context = screen.getContext('2d');
+	if (context.webkitImageSmoothingEnabled) {
+		context.webkitImageSmoothingEnabled = !pixelated;
+	} else if (context.mozImageSmoothingEnabled) {
+		context.mozImageSmoothingEnabled = !pixelated;
+	} else if (window.navigator.appName != 'Microsoft Internet Explorer') {
+			if (pixelated) {
+				screen.setAttribute('width', '240');
+				screen.setAttribute('height', '160');
+			} else {
+				screen.setAttribute('width', '480');
+				screen.setAttribute('height', '320');
+			}
+			if (window.navigator.appName == 'Opera') {
+			if (pixelated) {
+				screen.style.marginTop = '0';
+				screen.style.marginBottom = '-325px';
+			} else {
+				delete screen.style;
+			}
+		}
+	}
+}
+
+function enableDebug() {
+	window.onmessage = function(message) {
+		if (message.origin != document.domain && (message.origin != 'file://' || document.domain)) {
+			console.log('Failed XSS');
+			return;
+		}
+		switch (message.data) {
+		case 'connect':
+			if (message.source == debug) {
+				debug.postMessage('connect', document.domain || '*');
+			}
+			break;
+		case 'connected':
+			break;
+		case 'disconnect':
+			if (message.source == debug) {
+				debug = null;
+			}
+		}
+	}
+	window.onunload = function() {
+		if (debug && debug.postMessage) {
+			debug.postMessage('disconnect', document.domain || '*');
+		}
+	}
+
+}
+
+document.addEventListener('webkitfullscreenchange', function() {
+	var canvas = document.getElementById('screen');
+	if (document.webkitIsFullScreen) {
+		canvas.setAttribute('height', document.body.offsetHeight);
+		canvas.setAttribute('width', document.body.offsetHeight / 2 * 3);
+		canvas.setAttribute('style', 'margin: 0');
+	} else {
+		canvas.setAttribute('height', 320);
+		canvas.setAttribute('width', 480);
+		canvas.removeAttribute('style');
+	}
+}, false);
+</script>
+</head>
+<body>
+<header>
+	<h1>Game Boy Advance Emulator</h1>
+	<p>by Gustavo Queiroz</p>
+</header>
+
+<div id="main-container">
+	<section id="instructions">
+		<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+			<h3 style="margin: 0;">Keyboard Controls</h3>
+			<button id="reset-controls-btn" onclick="resetControlsToDefault()" style="font-size: 12px; padding: 6px 12px; margin: 0;">Reset Default</button>
+		</div>
+		<div class="controls-grid">
+			<div class="control-item remappable" data-action="UP" onclick="remapControl(this)">
+				<div class="control-label">D-Pad Up</div>
+				<div class="control-key" id="key-UP">↑</div>
+				<div class="control-hint">Click to change</div>
+			</div>
+			<div class="control-item remappable" data-action="DOWN" onclick="remapControl(this)">
+				<div class="control-label">D-Pad Down</div>
+				<div class="control-key" id="key-DOWN">↓</div>
+				<div class="control-hint">Click to change</div>
+			</div>
+			<div class="control-item remappable" data-action="LEFT" onclick="remapControl(this)">
+				<div class="control-label">D-Pad Left</div>
+				<div class="control-key" id="key-LEFT">←</div>
+				<div class="control-hint">Click to change</div>
+			</div>
+			<div class="control-item remappable" data-action="RIGHT" onclick="remapControl(this)">
+				<div class="control-label">D-Pad Right</div>
+				<div class="control-key" id="key-RIGHT">→</div>
+				<div class="control-hint">Click to change</div>
+			</div>
+			<div class="control-item remappable" data-action="A" onclick="remapControl(this)">
+				<div class="control-label">Button A</div>
+				<div class="control-key" id="key-A">X</div>
+				<div class="control-hint">Click to change</div>
+			</div>
+			<div class="control-item remappable" data-action="B" onclick="remapControl(this)">
+				<div class="control-label">Button B</div>
+				<div class="control-key" id="key-B">Z</div>
+				<div class="control-hint">Click to change</div>
+			</div>
+			<div class="control-item remappable" data-action="L" onclick="remapControl(this)">
+				<div class="control-label">L Button</div>
+				<div class="control-key" id="key-L">A</div>
+				<div class="control-hint">Click to change</div>
+			</div>
+			<div class="control-item remappable" data-action="R" onclick="remapControl(this)">
+				<div class="control-label">R Button</div>
+				<div class="control-key" id="key-R">S</div>
+				<div class="control-hint">Click to change</div>
+			</div>
+			<div class="control-item remappable" data-action="START" onclick="remapControl(this)">
+				<div class="control-label">Start</div>
+				<div class="control-key" id="key-START">Enter</div>
+				<div class="control-hint">Click to change</div>
+			</div>
+			<div class="control-item remappable" data-action="SELECT" onclick="remapControl(this)">
+				<div class="control-label">Select</div>
+				<div class="control-key" id="key-SELECT">\</div>
+				<div class="control-hint">Click to change</div>
+			</div>
+		</div>
+	</section>
+
+	<div id="game-area">
+		<div id="screen-container">
+			<canvas id="screen" width="480" height="320"></canvas>
+			<div id="performance-monitor">
+				<h4>Performance Monitor</h4>
+				<div class="perf-grid">
+					<div class="perf-item">
+						<span class="perf-label">FPS</span>
+						<span class="perf-value" id="fps-value">--</span>
+					</div>
+					<div class="perf-item">
+						<span class="perf-label">Speed</span>
+						<span class="perf-value" id="speed-value">--</span>
+					</div>
+					<div class="perf-item">
+						<span class="perf-label">Memory</span>
+						<span class="perf-value" id="memory-value">--</span>
+					</div>
+					<div class="perf-item">
+						<span class="perf-label">Session</span>
+						<span class="perf-value" id="time-value">00:00:00</span>
+					</div>
+				</div>
+			</div>
+		</div>
+		<section id="controls">
+	<div id="preload">
+		<button class="bigbutton" id="select" onclick="document.getElementById('loader').click()">Select ROM</button>
+		<input id="loader" type="file" accept=".gba" onchange="run(this.files[0]);">
+		<button onclick="document.getElementById('saveloader').click()">Upload Savegame</button>
+		<input id="saveloader" type="file" onchange="uploadSavedataPending(this.files[0]);">
+	</div>
+	<div id="ingame" class="hidden">
+		<button id="pause" class="bigbutton" onclick="togglePause()">PAUSE</button>
+		<button class="bigbutton" onclick="reset()">RESET</button>
+		<button onclick="gba.downloadSavedata()">Download Save</button>
+		<button onclick="screenshot()">Screenshot</button>
+		<label id="pixelated">
+			<input type="checkbox" onchange="setPixelated(this.checked)">
+			<p>Pixelated</p>
+		</label>
+		<div id="sound">
+			<input type="checkbox" checked onchange="gba.audio.masterEnable = this.checked">
+			<p>Sound</p>
+			<input type="range" min="0" max="1" value="1" step="any" onchange="setVolume(this.value)" oninput="setVolume(this.value)">
+		</div>
+	</div>
+</section>
+	</div>
+</div>
+</body>
+</html>
