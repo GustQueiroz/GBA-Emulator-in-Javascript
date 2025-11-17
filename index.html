@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="description" content="Game Boy Advance Emulator - Play GBA games in your browser">
 <meta name="theme-color" content="#667eea">
-<title>GBA.js - Game Boy Advance Emulator</title>
+<title>GBN</title>
 <link rel="stylesheet" href="resources/main.css">
 <link rel="stylesheet" href="style.css">
 <script src="js/util.js"></script>
@@ -815,6 +815,38 @@ function initTouchControls() {
 window.addEventListener('load', function() {
 	initTouchControls();
 });
+
+function toggleSettingsMenu() {
+	var menu = document.getElementById('settings-menu');
+	menu.classList.toggle('show');
+}
+
+function openModal(modalId) {
+	var modal = document.getElementById(modalId);
+	modal.style.display = 'flex';
+	document.getElementById('settings-menu').classList.remove('show');
+	document.body.style.overflow = 'hidden';
+}
+
+function closeModal(modalId) {
+	var modal = document.getElementById(modalId);
+	modal.style.display = 'none';
+	document.body.style.overflow = 'auto';
+}
+
+window.onclick = function(event) {
+	var settingsMenu = document.getElementById('settings-menu');
+	var settingsFab = document.getElementById('settings-fab');
+	
+	if (!settingsFab.contains(event.target) && !settingsMenu.contains(event.target)) {
+		settingsMenu.classList.remove('show');
+	}
+	
+	if (event.target.classList.contains('modal')) {
+		event.target.style.display = 'none';
+		document.body.style.overflow = 'auto';
+	}
+}
 </script>
 </head>
 <body>
@@ -823,13 +855,39 @@ window.addEventListener('load', function() {
 	<p>by Gustavo Queiroz</p>
 </header>
 
-<div id="main-container">
-	<section id="instructions">
-		<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-			<h3 style="margin: 0;">Keyboard Controls</h3>
-			<button id="reset-controls-btn" onclick="resetControlsToDefault()" style="font-size: 12px; padding: 6px 12px; margin: 0;">Reset Default</button>
+<button id="settings-fab" onclick="toggleSettingsMenu()">
+	<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+		<circle cx="12" cy="12" r="3"></circle>
+		<path d="M12 1v6m0 6v6m9-9h-6m-6 0H3m15.364 6.364l-4.243-4.243m-6 0L3.879 20.12m16.242 0l-4.243-4.243m-6 0l-4.242 4.243"></path>
+	</svg>
+</button>
+
+<div id="settings-menu" class="settings-dropdown">
+	<button class="settings-option" onclick="openModal('controls-modal')">
+		<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+			<rect x="2" y="7" width="20" height="10" rx="2"></rect>
+			<circle cx="7" cy="12" r="1"></circle>
+			<path d="M16 9h2m-2 6h2"></path>
+		</svg>
+		Keyboard Controls
+	</button>
+	<button class="settings-option" onclick="openModal('theme-modal')">
+		<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+			<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+		</svg>
+		Themes & Layout
+	</button>
+</div>
+
+<div id="controls-modal" class="modal">
+	<div class="modal-content">
+		<div class="modal-header">
+			<h3>Keyboard Controls</h3>
+			<button class="modal-close" onclick="closeModal('controls-modal')">&times;</button>
 		</div>
-		<div class="controls-grid">
+		<div class="modal-body">
+			<button id="reset-controls-btn" onclick="resetControlsToDefault()" style="margin-bottom: 16px;">Reset to Default</button>
+			<div class="controls-grid">
 			<div class="control-item remappable" data-action="UP" onclick="remapControl(this)">
 				<div class="control-label">D-Pad Up</div>
 				<div class="control-key" id="key-UP">↑</div>
@@ -881,8 +939,11 @@ window.addEventListener('load', function() {
 				<div class="control-hint">Click to change</div>
 			</div>
 		</div>
-	</section>
+		</div>
+	</div>
+</div>
 
+<div id="main-container">
 	<div id="game-area">
 		<div id="screen-container">
 			<canvas id="screen" width="480" height="320"></canvas>
@@ -943,9 +1004,7 @@ window.addEventListener('load', function() {
 	</div>
 	<div id="ingame" class="hidden">
 		<button id="pause" class="bigbutton" onclick="togglePause()">PAUSE</button>
-		<button class="bigbutton" onclick="reset()">RESET</button>
 		<button onclick="gba.downloadSavedata()">Download Save</button>
-		<button onclick="screenshot()">Screenshot</button>
 		<button onclick="toggleFullscreen()">Fullscreen</button>
 		<div id="sound">
 			<input type="checkbox" checked onchange="gba.audio.masterEnable = this.checked">
@@ -968,7 +1027,16 @@ window.addEventListener('load', function() {
 		</div>
 	</div>
 </section>
-		<section id="customization-panel">
+	</div>
+</div>
+
+<div id="theme-modal" class="modal">
+	<div class="modal-content">
+		<div class="modal-header">
+			<h3>Themes & Layout</h3>
+			<button class="modal-close" onclick="closeModal('theme-modal')">&times;</button>
+		</div>
+		<div class="modal-body">
 			<div id="theme-control">
 				<div class="theme-header">Themes</div>
 				<div class="theme-buttons">
@@ -995,8 +1063,9 @@ window.addEventListener('load', function() {
 					<button onclick="clearBackground()">Clear Image</button>
 				</div>
 			</div>
-		</section>
+		</div>
 	</div>
 </div>
+
 </body>
 </html>
