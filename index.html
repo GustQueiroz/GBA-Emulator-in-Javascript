@@ -38,6 +38,22 @@ var perfMonitor = {
 	timerInterval: null
 };
 
+var speedControl = {
+	currentSpeed: 1,
+	turboSpeed: 20,
+	turboActive: false,
+	previousSpeed: 1,
+	baseThrottle: 16.67,
+	minThrottle: 4,
+	framesPerIteration: 1
+};
+
+var themeManager = {
+	currentTheme: 'dark',
+	currentLayout: 'default',
+	customBackground: null
+};
+
 var controlRemapping = {
 	listening: false,
 	currentAction: null,
@@ -95,6 +111,13 @@ try {
 		perfMonitor.lastFPS = Math.round(fps);
 		updatePerformanceMonitor();
 	};
+	
+	var originalAdvanceFrame = gba.advanceFrame.bind(gba);
+	gba.advanceFrame = function() {
+		for (var i = 0; i < speedControl.framesPerIteration; i++) {
+			originalAdvanceFrame();
+		}
+	};
 } catch (exception) {
 	gba = null;
 }
@@ -121,6 +144,11 @@ window.onload = function() {
 		}
 		
 		loadControlMappings();
+		loadSpeedPreference();
+		loadCustomization();
+		
+		window.addEventListener('keydown', handleTurboKey, true);
+		window.addEventListener('keyup', handleTurboKey, true);
 	} else {
 		var dead = document.getElementById('controls');
 		dead.parentElement.removeChild(dead);
@@ -453,6 +481,197 @@ function resetControlsToDefault() {
 	cancelRemap();
 }
 
+function toggleFullscreen() {
+	var container = document.getElementById('screen-container');
+	
+	if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement) {
+		if (container.requestFullscreen) {
+			container.requestFullscreen();
+		} else if (container.webkitRequestFullscreen) {
+			container.webkitRequestFullscreen();
+		} else if (container.mozRequestFullScreen) {
+			container.mozRequestFullScreen();
+		}
+	} else {
+		if (document.exitFullscreen) {
+			document.exitFullscreen();
+		} else if (document.webkitExitFullscreen) {
+			document.webkitExitFullscreen();
+		} else if (document.mozCancelFullScreen) {
+			document.mozCancelFullScreen();
+		}
+	}
+}
+
+function applyTheme(themeName) {
+	themeManager.currentTheme = themeName;
+	document.body.setAttribute('data-theme', themeName);
+	localStorage.setItem('gbaTheme', themeName);
+	updateThemeUI();
+}
+
+function applyLayout(layoutName) {
+	themeManager.currentLayout = layoutName;
+	document.body.setAttribute('data-layout', layoutName);
+	localStorage.setItem('gbaLayout', layoutName);
+	updateLayoutUI();
+}
+
+function updateThemeUI() {
+	var themeButtons = document.querySelectorAll('.theme-btn');
+	themeButtons.forEach(function(btn) {
+		var btnTheme = btn.getAttribute('data-theme');
+		if (btnTheme === themeManager.currentTheme) {
+			btn.classList.add('active');
+		} else {
+			btn.classList.remove('active');
+		}
+	});
+}
+
+function updateLayoutUI() {
+	var layoutButtons = document.querySelectorAll('.layout-btn');
+	layoutButtons.forEach(function(btn) {
+		var btnLayout = btn.getAttribute('data-layout');
+		if (btnLayout === themeManager.currentLayout) {
+			btn.classList.add('active');
+		} else {
+			btn.classList.remove('active');
+		}
+	});
+}
+
+function uploadBackground() {
+	var input = document.createElement('input');
+	input.type = 'file';
+	input.accept = 'image/*';
+	input.onchange = function(e) {
+		var file = e.target.files[0];
+		if (file) {
+			var reader = new FileReader();
+			reader.onload = function(evt) {
+				themeManager.customBackground = evt.target.result;
+				document.body.style.backgroundImage = 'url(' + evt.target.result + ')';
+				document.body.style.backgroundSize = 'cover';
+				document.body.style.backgroundAttachment = 'fixed';
+				localStorage.setItem('gbaCustomBg', evt.target.result);
+			};
+			reader.readAsDataURL(file);
+		}
+	};
+	input.click();
+}
+
+function clearBackground() {
+	themeManager.customBackground = null;
+	document.body.style.backgroundImage = '';
+	localStorage.removeItem('gbaCustomBg');
+}
+
+function loadCustomization() {
+	var savedTheme = localStorage.getItem('gbaTheme');
+	if (savedTheme) {
+		applyTheme(savedTheme);
+	} else {
+		applyTheme('dark');
+	}
+	
+	var savedLayout = localStorage.getItem('gbaLayout');
+	if (savedLayout) {
+		applyLayout(savedLayout);
+	}
+	
+	var savedBg = localStorage.getItem('gbaCustomBg');
+	if (savedBg) {
+		themeManager.customBackground = savedBg;
+		document.body.style.backgroundImage = 'url(' + savedBg + ')';
+		document.body.style.backgroundSize = 'cover';
+		document.body.style.backgroundAttachment = 'fixed';
+	}
+}
+
+function setGameSpeed(speed) {
+	speedControl.currentSpeed = speed;
+	speedControl.previousSpeed = speed;
+	updateThrottle();
+	updateSpeedUI();
+	saveSpeedPreference();
+}
+
+function updateThrottle() {
+	var activeSpeed = speedControl.turboActive ? speedControl.turboSpeed : speedControl.currentSpeed;
+	var targetThrottle = speedControl.baseThrottle / activeSpeed;
+	
+	if (targetThrottle < speedControl.minThrottle) {
+		gba.throttle = speedControl.minThrottle;
+		speedControl.framesPerIteration = Math.ceil(speedControl.minThrottle / targetThrottle);
+	} else {
+		gba.throttle = targetThrottle;
+		speedControl.framesPerIteration = 1;
+	}
+}
+
+function updateSpeedUI() {
+	var speedButtons = document.querySelectorAll('.speed-btn');
+	speedButtons.forEach(function(btn) {
+		var btnSpeed = parseFloat(btn.getAttribute('data-speed'));
+		if (btnSpeed === speedControl.currentSpeed) {
+			btn.classList.add('active');
+		} else {
+			btn.classList.remove('active');
+		}
+	});
+	
+	var speedDisplay = document.getElementById('speed-display');
+	if (speedDisplay) {
+		var displaySpeed = speedControl.turboActive ? speedControl.turboSpeed : speedControl.currentSpeed;
+		speedDisplay.textContent = displaySpeed + 'x';
+	}
+}
+
+function activateTurbo() {
+	if (!speedControl.turboActive) {
+		speedControl.turboActive = true;
+		updateThrottle();
+		updateSpeedUI();
+	}
+}
+
+function deactivateTurbo() {
+	if (speedControl.turboActive) {
+		speedControl.turboActive = false;
+		updateThrottle();
+		updateSpeedUI();
+	}
+}
+
+function handleTurboKey(e) {
+	if (controlRemapping.listening) return;
+	
+	if (e.keyCode === 9) {
+		e.preventDefault();
+		if (e.type === 'keydown' && !speedControl.turboActive) {
+			activateTurbo();
+		} else if (e.type === 'keyup') {
+			deactivateTurbo();
+		}
+	}
+}
+
+function saveSpeedPreference() {
+	localStorage.setItem('gbaGameSpeed', speedControl.currentSpeed.toString());
+}
+
+function loadSpeedPreference() {
+	var savedSpeed = localStorage.getItem('gbaGameSpeed');
+	if (savedSpeed) {
+		var speed = parseFloat(savedSpeed);
+		if ([0.5, 1, 2, 5, 10].indexOf(speed) !== -1) {
+			setGameSpeed(speed);
+		}
+	}
+}
+
 function lcdFade(context, target, callback) {
 	var i = 0;
 	var drawInterval = setInterval(function() {
@@ -547,6 +766,55 @@ document.addEventListener('webkitfullscreenchange', function() {
 		canvas.removeAttribute('style');
 	}
 }, false);
+
+function initTouchControls() {
+	var keyMapping = {
+		'UP': gba.keypad.KEYCODE_UP,
+		'DOWN': gba.keypad.KEYCODE_DOWN,
+		'LEFT': gba.keypad.KEYCODE_LEFT,
+		'RIGHT': gba.keypad.KEYCODE_RIGHT,
+		'A': gba.keypad.KEYCODE_A,
+		'B': gba.keypad.KEYCODE_B,
+		'L': gba.keypad.KEYCODE_L,
+		'R': gba.keypad.KEYCODE_R,
+		'START': gba.keypad.KEYCODE_START,
+		'SELECT': gba.keypad.KEYCODE_SELECT
+	};
+	
+	var touchButtons = document.querySelectorAll('#touch-controls button');
+	
+	touchButtons.forEach(function(button) {
+		var key = button.getAttribute('data-key');
+		var keyCode = keyMapping[key];
+		
+		if (keyCode) {
+			button.addEventListener('touchstart', function(e) {
+				e.preventDefault();
+				if (gba && gba.keypad) {
+					gba.keypad.keyboardHandler({keyCode: keyCode, type: 'keydown', preventDefault: function(){}});
+				}
+			});
+			
+			button.addEventListener('touchend', function(e) {
+				e.preventDefault();
+				if (gba && gba.keypad) {
+					gba.keypad.keyboardHandler({keyCode: keyCode, type: 'keyup', preventDefault: function(){}});
+				}
+			});
+			
+			button.addEventListener('touchcancel', function(e) {
+				e.preventDefault();
+				if (gba && gba.keypad) {
+					gba.keypad.keyboardHandler({keyCode: keyCode, type: 'keyup', preventDefault: function(){}});
+				}
+			});
+		}
+	});
+}
+
+window.addEventListener('load', function() {
+	initTouchControls();
+});
 </script>
 </head>
 <body>
@@ -640,6 +908,32 @@ document.addEventListener('webkitfullscreenchange', function() {
 				</div>
 			</div>
 		</div>
+		
+		<div id="touch-controls">
+			<div id="dpad">
+				<button class="dpad-btn" id="btn-up" data-key="UP">↑</button>
+				<button class="dpad-btn" id="btn-left" data-key="LEFT">←</button>
+				<button class="dpad-btn" id="btn-right" data-key="RIGHT">→</button>
+				<button class="dpad-btn" id="btn-down" data-key="DOWN">↓</button>
+				<div class="dpad-center"></div>
+			</div>
+			
+			<div id="action-buttons">
+				<button class="action-btn" id="btn-b" data-key="B">B</button>
+				<button class="action-btn" id="btn-a" data-key="A">A</button>
+			</div>
+			
+			<div id="shoulder-buttons">
+				<button class="shoulder-btn" id="btn-l" data-key="L">L</button>
+				<button class="shoulder-btn" id="btn-r" data-key="R">R</button>
+			</div>
+			
+			<div id="menu-buttons">
+				<button class="menu-btn" id="btn-select" data-key="SELECT">SELECT</button>
+				<button class="menu-btn" id="btn-start" data-key="START">START</button>
+			</div>
+		</div>
+		
 		<section id="controls">
 	<div id="preload">
 		<button class="bigbutton" id="select" onclick="document.getElementById('loader').click()">Select ROM</button>
@@ -652,17 +946,56 @@ document.addEventListener('webkitfullscreenchange', function() {
 		<button class="bigbutton" onclick="reset()">RESET</button>
 		<button onclick="gba.downloadSavedata()">Download Save</button>
 		<button onclick="screenshot()">Screenshot</button>
-		<label id="pixelated">
-			<input type="checkbox" onchange="setPixelated(this.checked)">
-			<p>Pixelated</p>
-		</label>
+		<button onclick="toggleFullscreen()">Fullscreen</button>
 		<div id="sound">
 			<input type="checkbox" checked onchange="gba.audio.masterEnable = this.checked">
 			<p>Sound</p>
 			<input type="range" min="0" max="1" value="1" step="any" onchange="setVolume(this.value)" oninput="setVolume(this.value)">
 		</div>
+		<div id="speed-control">
+			<div class="speed-header">
+				<span class="speed-label">Game Speed</span>
+				<span class="speed-display" id="speed-display">1x</span>
+			</div>
+			<div class="speed-buttons">
+				<button class="speed-btn" data-speed="0.5" onclick="setGameSpeed(0.5)">0.5x</button>
+				<button class="speed-btn active" data-speed="1" onclick="setGameSpeed(1)">1x</button>
+				<button class="speed-btn" data-speed="2" onclick="setGameSpeed(2)">2x</button>
+				<button class="speed-btn" data-speed="5" onclick="setGameSpeed(5)">5x</button>
+				<button class="speed-btn" data-speed="10" onclick="setGameSpeed(10)">10x</button>
+			</div>
+			<div class="turbo-hint">Hold Tab for 20x turbo</div>
+		</div>
 	</div>
 </section>
+		<section id="customization-panel">
+			<div id="theme-control">
+				<div class="theme-header">Themes</div>
+				<div class="theme-buttons">
+					<button class="theme-btn" data-theme="purple" onclick="applyTheme('purple')">Purple</button>
+					<button class="theme-btn active" data-theme="dark" onclick="applyTheme('dark')">Dark</button>
+					<button class="theme-btn" data-theme="light" onclick="applyTheme('light')">Light</button>
+					<button class="theme-btn" data-theme="dracula" onclick="applyTheme('dracula')">Dracula</button>
+					<button class="theme-btn" data-theme="ocean" onclick="applyTheme('ocean')">Ocean</button>
+					<button class="theme-btn" data-theme="sunset" onclick="applyTheme('sunset')">Sunset</button>
+				</div>
+			</div>
+			<div id="layout-control">
+				<div class="layout-header">Layout</div>
+				<div class="layout-buttons">
+					<button class="layout-btn active" data-layout="default" onclick="applyLayout('default')">Default</button>
+					<button class="layout-btn" data-layout="vertical" onclick="applyLayout('vertical')">Vertical</button>
+					<button class="layout-btn" data-layout="compact" onclick="applyLayout('compact')">Compact</button>
+				</div>
+			</div>
+			<div id="custom-control">
+				<div class="custom-header">Background</div>
+				<div class="custom-buttons">
+					<button onclick="uploadBackground()">Upload Image</button>
+					<button onclick="clearBackground()">Clear Image</button>
+				</div>
+			</div>
+		</section>
 	</div>
 </div>
 </body>

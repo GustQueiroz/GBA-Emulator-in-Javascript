@@ -1,4 +1,88 @@
 
+:root {
+	--bg-gradient-1: #1a1a2e;
+	--bg-gradient-2: #16213e;
+	--bg-gradient-3: #0f3460;
+	--glass-bg: rgba(255, 255, 255, 0.05);
+	--glass-border: rgba(255, 255, 255, 0.1);
+	--text-primary: #e4e4e4;
+	--text-secondary: #a8a8ff;
+	--accent-1: rgba(106, 90, 205, 0.6);
+	--accent-2: rgba(75, 0, 130, 0.6);
+}
+
+body[data-theme="purple"] {
+	--bg-gradient-1: #667eea;
+	--bg-gradient-2: #764ba2;
+	--bg-gradient-3: #f093fb;
+	--glass-bg: rgba(255, 255, 255, 0.08);
+	--glass-border: rgba(255, 255, 255, 0.18);
+	--text-primary: white;
+	--text-secondary: #ffd6ff;
+	--accent-1: rgba(138, 43, 226, 0.5);
+	--accent-2: rgba(102, 126, 234, 0.5);
+}
+
+body[data-theme="dark"] {
+	--bg-gradient-1: #1a1a2e;
+	--bg-gradient-2: #16213e;
+	--bg-gradient-3: #0f3460;
+	--glass-bg: rgba(255, 255, 255, 0.05);
+	--glass-border: rgba(255, 255, 255, 0.1);
+	--text-primary: #e4e4e4;
+	--text-secondary: #a8a8ff;
+	--accent-1: rgba(106, 90, 205, 0.6);
+	--accent-2: rgba(75, 0, 130, 0.6);
+}
+
+body[data-theme="light"] {
+	--bg-gradient-1: #e0e7ff;
+	--bg-gradient-2: #cfd9e6;
+	--bg-gradient-3: #ddd6f3;
+	--glass-bg: rgba(255, 255, 255, 0.6);
+	--glass-border: rgba(255, 255, 255, 0.8);
+	--text-primary: #2d3748;
+	--text-secondary: #6b46c1;
+	--accent-1: rgba(138, 43, 226, 0.7);
+	--accent-2: rgba(102, 126, 234, 0.7);
+}
+
+body[data-theme="dracula"] {
+	--bg-gradient-1: #282a36;
+	--bg-gradient-2: #44475a;
+	--bg-gradient-3: #6272a4;
+	--glass-bg: rgba(68, 71, 90, 0.4);
+	--glass-border: rgba(98, 114, 164, 0.3);
+	--text-primary: #f8f8f2;
+	--text-secondary: #ff79c6;
+	--accent-1: rgba(189, 147, 249, 0.6);
+	--accent-2: rgba(139, 233, 253, 0.6);
+}
+
+body[data-theme="ocean"] {
+	--bg-gradient-1: #0a4d68;
+	--bg-gradient-2: #088395;
+	--bg-gradient-3: #05bfdb;
+	--glass-bg: rgba(255, 255, 255, 0.1);
+	--glass-border: rgba(255, 255, 255, 0.2);
+	--text-primary: #f0f0f0;
+	--text-secondary: #7dd3fc;
+	--accent-1: rgba(5, 191, 219, 0.6);
+	--accent-2: rgba(8, 131, 149, 0.6);
+}
+
+body[data-theme="sunset"] {
+	--bg-gradient-1: #ff6b6b;
+	--bg-gradient-2: #f06595;
+	--bg-gradient-3: #cc5de8;
+	--glass-bg: rgba(255, 255, 255, 0.12);
+	--glass-border: rgba(255, 255, 255, 0.25);
+	--text-primary: #fff;
+	--text-secondary: #ffd93d;
+	--accent-1: rgba(204, 93, 232, 0.6);
+	--accent-2: rgba(240, 101, 149, 0.6);
+}
+
 header {
 	margin: 20px auto 30px;
 	max-width: 1200px;
@@ -27,6 +111,7 @@ header p {
 	max-width: 1200px;
 	margin: 0 auto;
 	padding: 0 20px;
+	overflow-x: hidden;
 }
 
 #screen {
@@ -38,6 +123,8 @@ header p {
 	box-shadow: none !important;
 	animation: none !important;
 	display: block;
+	max-width: 100%;
+	height: auto;
 }
 
 #screen-container {
@@ -191,6 +278,194 @@ header p {
 	border: 1px solid rgba(255, 255, 255, 0.2) !important;
 }
 
+#speed-control {
+	margin: 16px 8px 8px;
+	padding: 16px;
+	background: rgba(255, 255, 255, 0.05);
+	border-radius: 12px;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.speed-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 12px;
+}
+
+.speed-label {
+	font-size: 13px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	opacity: 0.9;
+}
+
+.speed-display {
+	font-size: 18px;
+	font-weight: 700;
+	color: #ffd6ff;
+	min-width: 50px;
+	text-align: right;
+}
+
+.speed-buttons {
+	display: flex;
+	gap: 6px;
+	margin-bottom: 10px;
+}
+
+.speed-btn {
+	flex: 1;
+	font-size: 12px !important;
+	padding: 8px 4px !important;
+	margin: 0 !important;
+	background: rgba(255, 255, 255, 0.08) !important;
+	border: 1px solid rgba(255, 255, 255, 0.15) !important;
+	transition: all 0.2s ease;
+}
+
+.speed-btn:hover {
+	background: rgba(255, 255, 255, 0.15) !important;
+	border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.speed-btn.active {
+	background: linear-gradient(135deg, rgba(138, 43, 226, 0.6), rgba(102, 126, 234, 0.6)) !important;
+	border-color: rgba(255, 255, 255, 0.4) !important;
+	box-shadow: 0 0 15px rgba(138, 43, 226, 0.4);
+}
+
+.turbo-hint {
+	font-size: 10px;
+	text-align: center;
+	opacity: 0.6;
+	letter-spacing: 0.3px;
+}
+
+#customization-panel {
+	max-width: 700px;
+	width: 95%;
+	margin: 15px auto 30px;
+	padding: 24px;
+	background: var(--glass-bg, rgba(255, 255, 255, 0.08));
+	backdrop-filter: blur(30px) saturate(200%);
+	-webkit-backdrop-filter: blur(30px) saturate(200%);
+	border-radius: 28px;
+	border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.18));
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25),
+	            0 1px 0 rgba(255, 255, 255, 0.2) inset;
+	animation: fadeIn 1s ease-out 0.6s backwards;
+}
+
+#theme-control, #layout-control, #custom-control {
+	margin-bottom: 20px;
+}
+
+#theme-control:last-child, #layout-control:last-child, #custom-control:last-child {
+	margin-bottom: 0;
+}
+
+.theme-header, .layout-header, .custom-header {
+	font-size: 13px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	opacity: 0.9;
+	margin-bottom: 12px;
+}
+
+.theme-buttons, .layout-buttons {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 6px;
+	margin-bottom: 0;
+}
+
+.custom-buttons {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 6px;
+}
+
+.theme-btn, .layout-btn {
+	font-size: 11px !important;
+	padding: 8px 4px !important;
+	margin: 0 !important;
+	background: rgba(255, 255, 255, 0.08) !important;
+	border: 1px solid rgba(255, 255, 255, 0.15) !important;
+	transition: all 0.2s ease;
+}
+
+.theme-btn:hover, .layout-btn:hover {
+	background: rgba(255, 255, 255, 0.15) !important;
+	border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.theme-btn.active, .layout-btn.active {
+	background: linear-gradient(135deg, rgba(138, 43, 226, 0.6), rgba(102, 126, 234, 0.6)) !important;
+	border-color: rgba(255, 255, 255, 0.4) !important;
+	box-shadow: 0 0 15px rgba(138, 43, 226, 0.4);
+}
+
+.custom-buttons button {
+	font-size: 11px !important;
+	padding: 8px 4px !important;
+	margin: 0 !important;
+}
+
+body[data-layout="vertical"] #game-area {
+	grid-template-columns: 1fr !important;
+}
+
+body[data-layout="vertical"] #screen-container {
+	margin: 0 auto 30px;
+}
+
+body[data-layout="vertical"] #controls {
+	max-width: 700px;
+	margin: 0 auto;
+}
+
+body[data-layout="vertical"] #customization-panel {
+	max-width: 700px;
+}
+
+body[data-layout="compact"] {
+	padding: 20px 10px !important;
+}
+
+body[data-layout="compact"] header {
+	margin: 10px auto 20px !important;
+}
+
+body[data-layout="compact"] header h1 {
+	font-size: 42px !important;
+}
+
+body[data-layout="compact"] #instructions {
+	margin-bottom: 20px !important;
+	padding: 16px !important;
+}
+
+body[data-layout="compact"] #game-area {
+	gap: 20px !important;
+}
+
+body[data-layout="compact"] #screen-container {
+	padding: 16px !important;
+}
+
+body[data-layout="compact"] #performance-monitor {
+	margin-top: 15px !important;
+	padding: 16px !important;
+}
+
+body[data-layout="compact"] #customization-panel {
+	margin: 10px auto 20px !important;
+	padding: 16px !important;
+}
+
 #game-area {
 	display: grid;
 	grid-template-columns: 1fr;
@@ -206,8 +481,7 @@ header p {
 	}
 	
 	#screen-container {
-		position: sticky;
-		top: 20px;
+		animation: fadeIn 1s ease-out 0.2s backwards;
 	}
 	
 	#controls {
@@ -235,12 +509,12 @@ header p {
 		justify-content: flex-start;
 	}
 	
-	#screen-container {
-		animation: fadeIn 1s ease-out 0.2s backwards;
-	}
-	
 	#screen-container:hover {
 		transform: none;
+	}
+	
+	#customization-panel {
+		max-width: 1200px;
 	}
 }
 
@@ -261,6 +535,18 @@ header p {
 }
 
 @media (max-width: 768px) {
+	body {
+		padding: 30px 15px 360px 15px !important;
+	}
+	
+	#main-container {
+		padding: 0 15px;
+	}
+	
+	header {
+		padding: 0 15px;
+	}
+	
 	header h1 {
 		font-size: 42px !important;
 	}
@@ -270,38 +556,92 @@ header p {
 	}
 	
 	#instructions {
-		padding: 20px;
+		display: none !important;
 	}
 	
-	#instructions .controls-grid {
-		grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-		gap: 10px;
+	#touch-controls {
+		display: block !important;
+	}
+	
+	#screen-container {
+		max-width: 100%;
+		width: 100% !important;
+		box-sizing: border-box;
+		padding: 12px;
+	}
+	
+	#screen {
+		width: 100% !important;
+		max-width: 100% !important;
+		height: auto !important;
+		display: block;
+	}
+	
+	#controls {
+		width: 95% !important;
+		max-width: 100% !important;
+		box-sizing: border-box;
+	}
+	
+	#speed-control {
+		margin: 12px 8px 8px;
+		padding: 12px;
+	}
+	
+	.speed-btn {
+		font-size: 11px !important;
+		padding: 6px 3px !important;
+	}
+	
+	.turbo-hint {
+		font-size: 9px;
+	}
+	
+	#customization-panel {
+		padding: 20px;
+		margin: 12px auto 20px;
+		width: 95%;
+		max-width: 100%;
+		box-sizing: border-box;
+	}
+	
+	#theme-control, #layout-control, #custom-control {
+		margin-bottom: 16px;
+	}
+	
+	.theme-header, .layout-header, .custom-header {
+		font-size: 12px;
+		margin-bottom: 10px;
+	}
+	
+	.theme-buttons, .layout-buttons {
+		grid-template-columns: repeat(2, 1fr);
+	}
+	
+	.theme-btn, .layout-btn {
+		font-size: 10px !important;
+		padding: 6px 3px !important;
+	}
+	
+	.custom-buttons button {
+		font-size: 10px !important;
+		padding: 6px 3px !important;
+	}
+}
+
+@media (max-width: 480px) {
+	body {
+		padding: 20px 10px 320px 10px !important;
 	}
 	
 	#main-container {
 		padding: 0 10px;
 	}
 	
-	#screen-container {
-		padding: 16px;
-		border-radius: 20px;
+	header {
+		padding: 0 10px;
 	}
 	
-	.control-key {
-		font-size: 18px;
-		min-width: 45px;
-	}
-	
-	.control-label {
-		font-size: 10px;
-	}
-	
-	.control-hint {
-		font-size: 8px;
-	}
-}
-
-@media (max-width: 480px) {
 	header h1 {
 		font-size: 36px !important;
 	}
@@ -311,45 +651,341 @@ header p {
 	}
 	
 	#instructions {
-		padding: 16px;
+		display: none !important;
 	}
 	
-	#instructions h3 {
-		font-size: 14px !important;
+	#touch-controls {
+		display: block !important;
+		height: 300px;
 	}
 	
-	#instructions .controls-grid {
-		grid-template-columns: repeat(2, 1fr);
-		gap: 8px;
+	#dpad {
+		bottom: 70px;
+		left: 20px;
+		width: 120px;
+		height: 120px;
 	}
 	
-	#instructions .control-item {
-		padding: 8px;
+	.dpad-btn {
+		width: 38px;
+		height: 38px;
+		font-size: 20px;
+	}
+	
+	.dpad-center {
+		width: 30px;
+		height: 30px;
+	}
+	
+	#action-buttons {
+		bottom: 80px;
+		right: 20px;
+		width: 120px;
+		height: 85px;
+	}
+	
+	.action-btn {
+		width: 50px;
+		height: 50px;
+		font-size: 16px;
+	}
+	
+	#btn-a {
+		top: 15px;
+	}
+	
+	#shoulder-buttons {
+		top: 8px;
+		padding: 0 15px;
+	}
+	
+	.shoulder-btn {
+		width: 60px;
+		height: 30px;
+		font-size: 12px;
+	}
+	
+	#menu-buttons {
+		bottom: 15px;
+		gap: 12px;
+	}
+	
+	.menu-btn {
+		width: 65px;
+		height: 26px;
+		font-size: 10px;
 	}
 	
 	#screen-container {
-		padding: 12px;
+		padding: 8px;
 		border-radius: 16px;
+		max-width: 100%;
+		width: 100% !important;
+		box-sizing: border-box;
 	}
 	
-	.control-key {
+	#screen {
+		width: 100% !important;
+		max-width: 100% !important;
+		height: auto !important;
+		display: block;
+	}
+	
+	#speed-control {
+		margin: 10px 6px 6px;
+		padding: 10px;
+	}
+	
+	.speed-label {
+		font-size: 11px;
+	}
+	
+	.speed-display {
 		font-size: 16px;
-		min-width: 40px;
-		padding: 3px 6px;
 	}
 	
-	.control-label {
-		font-size: 9px;
-	}
-	
-	.control-hint {
-		font-size: 7px;
-	}
-	
-	#reset-controls-btn {
+	.speed-btn {
 		font-size: 10px !important;
-		padding: 4px 8px !important;
+		padding: 6px 2px !important;
 	}
+	
+	.turbo-hint {
+		font-size: 8px;
+	}
+	
+	#customization-panel {
+		padding: 16px;
+		margin: 10px auto 20px;
+		width: 100%;
+		max-width: 100%;
+		box-sizing: border-box;
+	}
+	
+	#controls {
+		width: 100% !important;
+		max-width: 100% !important;
+		box-sizing: border-box;
+	}
+	
+	#theme-control, #layout-control, #custom-control {
+		margin-bottom: 12px;
+	}
+	
+	.theme-header, .layout-header, .custom-header {
+		font-size: 11px;
+		margin-bottom: 8px;
+	}
+	
+	.theme-buttons, .layout-buttons, .custom-buttons {
+		grid-template-columns: repeat(2, 1fr);
+		gap: 4px;
+	}
+	
+	.theme-btn, .layout-btn {
+		font-size: 9px !important;
+		padding: 6px 2px !important;
+	}
+	
+	.custom-buttons button {
+		font-size: 9px !important;
+		padding: 6px 2px !important;
+	}
+}
+
+#touch-controls {
+	display: none;
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	height: 340px;
+	pointer-events: none;
+	z-index: 1000;
+}
+
+#dpad {
+	position: absolute;
+	bottom: 80px;
+	left: 30px;
+	width: 140px;
+	height: 140px;
+	pointer-events: all;
+}
+
+.dpad-btn {
+	position: absolute;
+	width: 45px;
+	height: 45px;
+	background: rgba(255, 255, 255, 0.15);
+	backdrop-filter: blur(10px);
+	border: 2px solid rgba(255, 255, 255, 0.3);
+	border-radius: 8px;
+	color: white;
+	font-size: 24px;
+	font-weight: bold;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	user-select: none;
+	transition: all 0.1s ease;
+	outline: none;
+	-webkit-tap-highlight-color: transparent;
+}
+
+.dpad-btn:active {
+	background: rgba(138, 43, 226, 0.6);
+	border-color: rgba(138, 43, 226, 0.8);
+	transform: scale(0.95);
+}
+
+#btn-up {
+	top: 0;
+	left: 50%;
+	transform: translateX(-50%);
+}
+
+#btn-down {
+	bottom: 0;
+	left: 50%;
+	transform: translateX(-50%);
+}
+
+#btn-left {
+	left: 0;
+	top: 50%;
+	transform: translateY(-50%);
+}
+
+#btn-right {
+	right: 0;
+	top: 50%;
+	transform: translateY(-50%);
+}
+
+.dpad-center {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 35px;
+	height: 35px;
+	background: rgba(255, 255, 255, 0.05);
+	border-radius: 50%;
+	border: 2px solid rgba(255, 255, 255, 0.15);
+}
+
+#action-buttons {
+	position: absolute;
+	bottom: 90px;
+	right: 30px;
+	width: 140px;
+	height: 100px;
+	pointer-events: all;
+}
+
+.action-btn {
+	position: absolute;
+	width: 60px;
+	height: 60px;
+	background: rgba(255, 255, 255, 0.15);
+	backdrop-filter: blur(10px);
+	border: 2px solid rgba(255, 255, 255, 0.3);
+	border-radius: 50%;
+	color: white;
+	font-size: 18px;
+	font-weight: bold;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	user-select: none;
+	transition: all 0.1s ease;
+	outline: none;
+	-webkit-tap-highlight-color: transparent;
+}
+
+.action-btn:active {
+	background: rgba(138, 43, 226, 0.6);
+	border-color: rgba(138, 43, 226, 0.8);
+	transform: scale(0.95);
+}
+
+#btn-a {
+	right: 0;
+	top: 20px;
+}
+
+#btn-b {
+	left: 0;
+	bottom: 0;
+}
+
+#shoulder-buttons {
+	position: absolute;
+	top: 10px;
+	left: 0;
+	right: 0;
+	display: flex;
+	justify-content: space-between;
+	padding: 0 20px;
+	pointer-events: all;
+}
+
+.shoulder-btn {
+	width: 70px;
+	height: 35px;
+	background: rgba(255, 255, 255, 0.15);
+	backdrop-filter: blur(10px);
+	border: 2px solid rgba(255, 255, 255, 0.3);
+	border-radius: 8px 8px 0 0;
+	color: white;
+	font-size: 14px;
+	font-weight: bold;
+	cursor: pointer;
+	user-select: none;
+	transition: all 0.1s ease;
+	outline: none;
+	-webkit-tap-highlight-color: transparent;
+}
+
+.shoulder-btn:active {
+	background: rgba(138, 43, 226, 0.6);
+	border-color: rgba(138, 43, 226, 0.8);
+	transform: scale(0.95);
+}
+
+#menu-buttons {
+	position: absolute;
+	bottom: 20px;
+	left: 50%;
+	transform: translateX(-50%);
+	display: flex;
+	gap: 15px;
+	pointer-events: all;
+}
+
+.menu-btn {
+	width: 70px;
+	height: 28px;
+	background: rgba(255, 255, 255, 0.15);
+	backdrop-filter: blur(10px);
+	border: 2px solid rgba(255, 255, 255, 0.3);
+	border-radius: 14px;
+	color: white;
+	font-size: 11px;
+	font-weight: bold;
+	cursor: pointer;
+	user-select: none;
+	transition: all 0.1s ease;
+	outline: none;
+	-webkit-tap-highlight-color: transparent;
+}
+
+.menu-btn:active {
+	background: rgba(138, 43, 226, 0.6);
+	border-color: rgba(138, 43, 226, 0.8);
+	transform: scale(0.95);
 }
 
 #performance-monitor {
@@ -451,39 +1087,13 @@ header p {
 
 @media (max-width: 768px) {
 	#performance-monitor {
-		margin-top: 15px;
-		padding: 16px;
-	}
-	
-	#performance-monitor h4 {
-		font-size: 14px;
-		margin-bottom: 12px;
-	}
-	
-	.perf-item {
-		padding: 10px;
-	}
-	
-	.perf-label {
-		font-size: 10px;
-	}
-	
-	.perf-value {
-		font-size: 18px;
+		display: none !important;
 	}
 }
 
 @media (max-width: 480px) {
-	.perf-grid {
-		gap: 8px;
-	}
-	
-	.perf-item {
-		padding: 8px;
-	}
-	
-	.perf-value {
-		font-size: 16px;
+	#performance-monitor {
+		display: none !important;
 	}
 }
 
