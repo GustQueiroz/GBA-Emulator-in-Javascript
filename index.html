@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="description" content="Game Boy Advance Emulator - Play GBA games in your browser">
 <meta name="theme-color" content="#667eea">
-<title>GBN</title>
+<title>GBAW</title>
 <link rel="stylesheet" href="resources/main.css">
 <link rel="stylesheet" href="style.css">
 <script src="js/util.js"></script>
@@ -481,25 +481,77 @@ function resetControlsToDefault() {
 	cancelRemap();
 }
 
+var fullscreenEscListener = null;
+
 function toggleFullscreen() {
-	var container = document.getElementById('screen-container');
+	var overlay = document.getElementById('fullscreen-overlay');
 	
-	if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement) {
-		if (container.requestFullscreen) {
-			container.requestFullscreen();
-		} else if (container.webkitRequestFullscreen) {
-			container.webkitRequestFullscreen();
-		} else if (container.mozRequestFullScreen) {
-			container.mozRequestFullScreen();
-		}
+	if (!overlay) {
+		overlay = document.createElement('div');
+		overlay.id = 'fullscreen-overlay';
+		overlay.className = 'fullscreen-overlay';
+		
+		var fsContainer = document.createElement('div');
+		fsContainer.className = 'fullscreen-game-container';
+		
+		var closeBtn = document.createElement('button');
+		closeBtn.className = 'fullscreen-close';
+		closeBtn.innerHTML = '&times;';
+		closeBtn.onclick = toggleFullscreen;
+		
+		var escHint = document.createElement('div');
+		escHint.className = 'fullscreen-hint';
+		escHint.innerHTML = 'Pressione <kbd>ESC</kbd> ou clique no X para sair';
+
+		var canvas = document.getElementById('screen');
+		var originalParent = canvas.parentNode;
+
+		overlay.setAttribute('data-original-parent', originalParent.id);
+
+		fsContainer.appendChild(canvas);
+		overlay.appendChild(closeBtn);
+		overlay.appendChild(escHint);
+		overlay.appendChild(fsContainer);
+		document.body.appendChild(overlay);
+
+		document.body.style.overflow = 'hidden';
+
+		fullscreenEscListener = function(e) {
+			if (e.key === 'Escape') {
+				toggleFullscreen();
+			}
+		};
+		document.addEventListener('keydown', fullscreenEscListener);
+
+		setTimeout(function() {
+			overlay.classList.add('active');
+		}, 10);
+
+		setTimeout(function() {
+			escHint.style.opacity = '0';
+			escHint.style.transition = 'opacity 0.5s ease';
+		}, 5000);
 	} else {
-		if (document.exitFullscreen) {
-			document.exitFullscreen();
-		} else if (document.webkitExitFullscreen) {
-			document.webkitExitFullscreen();
-		} else if (document.mozCancelFullScreen) {
-			document.mozCancelFullScreen();
+		overlay.classList.remove('active');
+
+		if (fullscreenEscListener) {
+			document.removeEventListener('keydown', fullscreenEscListener);
+			fullscreenEscListener = null;
 		}
+		
+		setTimeout(function() {
+			var canvas = document.getElementById('screen');
+			var originalParentId = overlay.getAttribute('data-original-parent');
+			var originalParent = document.getElementById(originalParentId);
+
+			if (originalParent) {
+				originalParent.appendChild(canvas);
+			}
+
+			overlay.remove();
+
+			document.body.style.overflow = 'auto';
+		}, 300);
 	}
 }
 
@@ -753,19 +805,6 @@ function enableDebug() {
 	}
 
 }
-
-document.addEventListener('webkitfullscreenchange', function() {
-	var canvas = document.getElementById('screen');
-	if (document.webkitIsFullScreen) {
-		canvas.setAttribute('height', document.body.offsetHeight);
-		canvas.setAttribute('width', document.body.offsetHeight / 2 * 3);
-		canvas.setAttribute('style', 'margin: 0');
-	} else {
-		canvas.setAttribute('height', 320);
-		canvas.setAttribute('width', 480);
-		canvas.removeAttribute('style');
-	}
-}, false);
 
 function initTouchControls() {
 	var keyMapping = {

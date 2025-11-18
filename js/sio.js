@@ -80,7 +80,7 @@ GameBoyAdvanceSIO.prototype.writeSIOCNT = function(value) {
 };
 
 GameBoyAdvanceSIO.prototype.readSIOCNT = function() {
-	var value = (this.mode << 12) & 0xFFFF;
+	let value = (this.mode << 12) & 0xFFFF;
 	switch (this.mode) {
 	case this.SIO_NORMAL_8:
 		this.core.STUB('8-bit transfer unsupported');

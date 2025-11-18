@@ -79,10 +79,10 @@ GameBoyAdvanceVideo.prototype.defrost = function(frost) {
 };
 
 GameBoyAdvanceVideo.prototype.setBacking = function(backing) {
-	var pixelData = backing.createImageData(this.HORIZONTAL_PIXELS, this.VERTICAL_PIXELS);
+	let pixelData = backing.createImageData(this.HORIZONTAL_PIXELS, this.VERTICAL_PIXELS);
 	this.context = backing;
 
-	for (var offset = 0; offset < this.HORIZONTAL_PIXELS * this.VERTICAL_PIXELS * 4;) {
+	for (let offset = 0; offset < this.HORIZONTAL_PIXELS * this.VERTICAL_PIXELS * 4;) {
 		pixelData.data[offset++] = 0xFF;
 		pixelData.data[offset++] = 0xFF;
 		pixelData.data[offset++] = 0xFF;
@@ -93,7 +93,7 @@ GameBoyAdvanceVideo.prototype.setBacking = function(backing) {
 }
 
 GameBoyAdvanceVideo.prototype.updateTimers = function(cpu) {
-	var cycles = cpu.cycles;
+	let cycles = cpu.cycles;
 
 	if (this.nextEvent <= cycles) {
 		if (this.inHblank) {
